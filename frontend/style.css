@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Grandstander:ital,wght@0,100..900;1,100..900&display=swap');
+canvas {
+    position: fixed;
+    left: 0;
+    top: 0;
+    cursor: crosshair; /*spice*/
+}
+
+body {
+    background-color: #121212;
+    overscroll-behavior: none;
+    user-select: none;
+    margin: 0;
+}

@@ -47,6 +47,6 @@ class SpatialHash {
     }
     findNearby(x,y){
         // For our use case, we assume that neurons are too far away if they're not in our spatial hash cell or any of the adjacent. We push to all of the adjacent spaces, so our lookup is fast.
-        return this.positions[x][y];
+        return this.positions[Math.floor(x / this.binDistance)][Math.floor(y / this.binDistance)];
     }
 }
