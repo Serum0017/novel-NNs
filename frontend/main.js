@@ -44,7 +44,8 @@ const NN = new FreeformNN({
     numInputs: 2,
     numOutputs: 1,
     steps: 5,
-    learningRate: 0.01
+    learningRate: 0.001,
+    initNeuronsOnEdge: true,
 });
 
 const TAU = Math.PI * 2;
@@ -98,14 +99,21 @@ function renderNetwork(){
     ctx.textBaseline = 'middle';
     ctx.lineWidth = 3;
 
-    let MSE = new Array(xor.inputs[0].length).fill(0);
-    for(let i = 0; i < xor.inputs.length; i++){
-        const outputs = NN.forward(xor.inputs[i]);
-        for(let j = 0; j < outputs.length; j++){
-            MSE[j] += (outputs[j] - xor.outputs[i][j]) ** 2;
-        }
+    // let MSE = new Array(xor.inputs[0].length).fill(0);
+    // for(let i = 0; i < xor.inputs.length; i++){
+    //     const outputs = NN.forward(xor.inputs[i]);
+    //     for(let j = 0; j < outputs.length; j++){
+    //         MSE[j] += (outputs[j] - xor.outputs[i][j]) ** 2;
+    //         // console.log(outputs[j], xor.outputs[i][j]);
+    //     }
+    // }
+    // text("MSE: [" + MSE.map(m => m.toFixed(4)).join(',') + "]", canvas.w / 2, canvas.h * 0.05);
+
+    let predictedDeltas = new Array(xor.inputs.length).fill(0);
+    for(let i = 0; i < predictedDeltas.length; i++){
+        predictedDeltas[i] = NN.forward(xor.inputs[i]) - xor.outputs[i];
     }
-    text("MSE: [" + MSE.map(m => m.toFixed(4)).join(',') + "]", canvas.w / 2, canvas.h * 0.05);
+    text("predictedDeltas: [" + predictedDeltas.map(m => m.toFixed(4)).join(',') + "]", canvas.w / 2, canvas.h * 0.05);
 }
 
 function text(txt, x,y){
@@ -138,29 +146,31 @@ function interpolate(a,b,t){
 
 const xor = {
     inputs: [
-        [0, 0]
-        [0, 1],
-        [1, 0],
-        [1, 1]
+        [0/*,0*/],
+        // [0, 1],
+        // [1, 0],
+        // [1, 1]
     ],
     outputs: [
         [0],
-        [1],
-        [1],
-        [0]
+        // [1],
+        // [1],
+        // [0]
     ]
 }
+
+// TODO: Use new Dataset.
 
 function run(){
     NN.train(xor.inputs, xor.outputs);
 
     renderNetwork();
 
-    // requestAnimationFrame(run);
+    requestAnimationFrame(run);
 
-    setTimeout(() => {
-        run();
-    }, 100)
+    // setTimeout(() => {
+    //     run();
+    // }, 100)
 }
 
 run();
