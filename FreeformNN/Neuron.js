@@ -17,7 +17,7 @@ class Neuron {
 
         // incoming weights
         this.weights = [];
-        this.bias = 0;
+        this.bias = Math.random() - .5;
 
         // reference to incoming connections
         this.connections = [];
@@ -48,6 +48,6 @@ class Neuron {
 
     addConnection(other){
         this.connections.push(other);
-        this.weights.push(Math.random()-0.5);
+        this.weights.push(Math.random()*2-1);
     }
 }

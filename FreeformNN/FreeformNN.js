@@ -8,19 +8,23 @@ class FreeformNN {
     // learning rate: standard NN learning rate
     constructor({
         physicalBrainSize,
-        neuronConnectionRange=physicalBrainSize/8,
+        neuronConnectionRange=physicalBrainSize/6,
         numInputs,
         numOutputs,
         steps=10,
         learningRate=0.01,
-        createNeuronProbability=0/*0.08*/,
-        connectionRate=1,
+        createNeuronProbability=0.0008,
+        // connectionRate=1,
 
-        /*format: [[x,y], [x,y], ...]*/
-        initNeuronsOnEdge=false,
+        initialGridSize=.3,
 
-        /*format: [[nodeIndex, nodeIndex2], ...]*/
-        initialNetworkConnections=[]
+        // takes up .8 of the entire grid
+        initialSpread=0.8,
+
+        gridRandomOffsetMagnitude=.01,
+
+        connectionChance=0.5,
+        doubleConnectionChance=0.5,
     }){
         // all nodes are static
         this.nodes = [];
@@ -37,43 +41,54 @@ class FreeformNN {
 
         this.coordinateRadius = (this.maxCoord - this.minCoord) / 2;
         this.coordinateMiddle = this.size / 2;
+        
+        this.connectionChance = connectionChance;
+        this.doubleConnectionChance = doubleConnectionChance;
 
         // this.numInputs = numInputs;
         // this.numOutputs = numOutputs;
 
-        // create inputs and outputs
-        if(initNeuronsOnEdge === true) {
-            for(let i = 0; i < numInputs; i++){
-                const angle = i / (numInputs+numOutputs) * Math.PI * 2;
+        // create inputs and outputs equally spaced on the edge
+        for(let i = 0; i < numInputs; i++){
+            this.addNeuron({
+                x: this.coordinateMiddle - this.coordinateRadius * .99,
+                y: this.coordinateMiddle + (numInputs === 1 ? 0 : (i / (numInputs-1)  - .5)) * this.coordinateRadius * 2 * .99,
+            }).isInput = true;
+        }
+
+        for(let i = 0; i < numOutputs; i++){
+            const neuron = this.addNeuron({
+                x: this.coordinateMiddle + this.coordinateRadius * .99,
+                y: this.coordinateMiddle + (numOutputs === 1 ? 0 : (i / (numOutputs-1) - .5)) * this.coordinateRadius * 2 * .99,
+            })
+            neuron.isOutput = true;
+            // for(let j = 0; j < numInputs; j++){
+            //     neuron.addConnection(this.nodes[j]);
+            // }
+        }
+
+        // for(let i = 0; i < initialHiddenNeurons.length; i++){
+        //     this.addNeuron({
+        //         x: this.coordinateMiddle + initialHiddenNeurons[i][0] * this.coordinateRadius,
+        //         y: this.coordinateMiddle + initialHiddenNeurons[i][1] * this.coordinateRadius
+        //     })
+        // }
+
+        // for(let i = 0; i < initialNetworkConnections.length; i++){
+        //     this.nodes[initialNetworkConnections[i][1]].addConnection(this.nodes[initialNetworkConnections[i][0]]);
+        // }
+
+        for(let x = -1; x < 1; x += initialGridSize * 2){
+            for(let y = -1; y < 1; y += initialGridSize * 2){
                 this.addNeuron({
-                    x: Math.cos(angle) * this.coordinateRadius + this.coordinateMiddle*.99,
-                    y: Math.sin(angle) * this.coordinateRadius + this.coordinateMiddle*.99,
-                }).isInput = true;
-            }
-    
-            for(let i = 0; i < numOutputs; i++){
-                const angle = (numInputs+i) / (numInputs+numOutputs) * Math.PI * 2;
-                const neuron = this.addNeuron({
-                    x: Math.cos(angle) * this.coordinateRadius + this.coordinateMiddle*.99,
-                    y: Math.sin(angle) * this.coordinateRadius + this.coordinateMiddle*.99,
+                    x: this.coordinateMiddle + x * this.coordinateRadius * initialSpread + (Math.random()*2-1) * gridRandomOffsetMagnitude,
+                    y: this.coordinateMiddle + y * this.coordinateRadius * initialSpread + (Math.random()*2-1) * gridRandomOffsetMagnitude,
                 })
-                neuron.isOutput = true;
-                for(let j = 0; j < numInputs; j++){
-                    neuron.addConnection(this.nodes[j]);
-                }
             }
-        } else {
-            for(let i = 0; i < numInputs; i++){
-                this.addNeuron().isInput = true;
-            }
-    
-            for(let i = 0; i < numOutputs; i++){
-                const neuron = this.addNeuron();
-                neuron.isOutput = true;
-                for(let j = 0; j < numInputs; j++){
-                    neuron.addConnection(this.nodes[j]);
-                }
-            }
+        }
+
+        for(let i = numInputs+numOutputs; i < this.nodes.length; i++){
+            this.connectToNearby(this.nodes[i]);
         }
 
         this.numInputs = numInputs;
@@ -87,10 +102,10 @@ class FreeformNN {
 
         this.createNeuronProbability = createNeuronProbability;
 
-        this.connectionRate = connectionRate;
+        // this.connectionRate = connectionRate;
 
         // for derivative approximation
-        this.h = 0.01;
+        this.h = 0.0001;
     }
 
     addNeuron(pos=this.randomNeuronPosition()){
@@ -149,78 +164,98 @@ class FreeformNN {
         // find the error
         let error = 0;
         for(let i = 0; i < inputs.length; i++){
-            error += this.forward(inputs[i]) - outputs[i];
+            error += (this.forward(inputs[i]) - outputs[i]) ** 2;
+
+            // console.log(inputs[i], this.forward(inputs[i]), outputs[i]);
         }
+
+        // console.log({error});
 
         for(let i = 0; i < this.nodes.length; i++){
             // calculate what happens if we change each weight by a tiny bit
-            // gradients[i] = [];
-            // for(let j = 0; j < this.nodes[i].weights.length; j++){
-            //     this.nodes[i].weights[j] += this.h;
-            //     let gradientError = 0;
-            //     for(let j = 0; j < inputs.length; j++){
-            //         gradientError += this.forward(inputs[j]) - outputs[j];
-            //     }
-            //     this.nodes[i].weights[j] -= this.h;
+            gradients[i] = [];
+            for(let j = 0; j < this.nodes[i].weights.length; j++){
+                this.nodes[i].weights[j] += this.h;
+                let gradientError = 0;
+                for(let j = 0; j < inputs.length; j++){
+                    gradientError += (this.forward(inputs[j]) - outputs[j]) ** 2;
+                }
+                this.nodes[i].weights[j] -= this.h;
 
-            //     // approximation of the derivative
-            //     gradients[i][j] = (gradientError - error) / this.h;
-            // }
+                // approximation of the derivative
+                gradients[i][j] = (gradientError - error) / this.h;
+            }
 
             // calculate what happens if we change the bias by a tiny bit
             this.nodes[i].bias += this.h;
             let biasError = 0;
             for(let j = 0; j < inputs.length; j++){
-                biasError += this.forward(inputs[j]) - outputs[j];
+                biasError += (this.forward(inputs[j]) - outputs[j]) ** 2;
+
+                // console.log(this.nodes[i].bias, inputs[j], outputs[j], {forward: this.forward(inputs[j])});
             }
             this.nodes[i].bias -= this.h;
 
             biasGradients[i] = (biasError - error) / this.h;
 
-            if(this.nodes[i].isOutput === true)console.log(biasGradients[i]);
+            // console.log({biasError});
+
+            // if(this.nodes[i].isOutput)console.log(biasError, error, this.nodes[i].bias);
+
+            // if(this.nodes[i].isOutput === true)console.log(biasGradients[i], biasError, error, this.h);
         }
 
         // apply gradients
         for(let i = 0; i < this.nodes.length; i++){
-            // for(let j = 0; j < gradients[i].length; j++){
-            //     this.nodes[i].weights[j] += gradients[i][j] * this.learningRate;
-            // }
+            for(let j = 0; j < gradients[i].length; j++){
+                this.nodes[i].weights[j] -= gradients[i][j] * this.learningRate;
+            }
             this.nodes[i].bias -= biasGradients[i] * this.learningRate;
         }
 
         // randomly creating neurons
-        // TODO: make some sort of directionality to this?
-        // a) spawn new nodes near existing ones along the path to the output and
-        // b) Make inputs on one side and outputs on the other, and have the direction of connections go mostly from input side -> output side
-        // if(Math.random() < this.createNeuronProbability){
-        //     const position = this.randomNeuronPosition();
-        //     const nearby = this.spHash.findNearby(position.x, position.y);
-        //     const neuron = this.addNeuron(position);
-        //     const maxNearbyDist = this.neuronConnectionRange * 2;
+        if(Math.random() < this.createNeuronProbability) this.connectToNearby(this.addNeuron());
+    }
 
-        //     let dist;
-        //     for(let i = 0; i < nearby.length; i++){
-        //         dist = Math.sqrt((nearby[i].x - neuron.x)**2 + (nearby[i].y - neuron.y)**2);
+    connectToNearby(neuron){
+        const nearby = this.spHash.findNearby(neuron.x, neuron.y);
 
-        //         if(/*(Math.random()*0.7+0.3)*/0 * this.connectionRate < (1 - dist / maxNearbyDist) /*** 2*/){
-        //             if(nearby[i].isInput){
-        //                 neuron.addConnection(nearby[i]);
-        //                 continue;
-        //             } else if(nearby[i].isOutput){
-        //                 nearby[i].addConnection(neuron);
-        //                 continue;
-        //             }
+        // const maxNearbyDist = this.neuronConnectionRange * 2;
 
-        //             if(Math.random() < 0.5){
-        //                 // connect this node to other node
-        //                 neuron.addConnection(nearby[i]);
-        //             } else {
-        //                 // connect other node to this node
-        //                 nearby[i].addConnection(neuron);
-        //             }
-        //         }
-        //     }
-        // }
+        // let dist;
+        for(let i = 0; i < nearby.length; i++){
+            if(nearby[i] === neuron) continue;
+            // dist = Math.sqrt((nearby[i].x - neuron.x)**2 + (nearby[i].y - neuron.y)**2);
+
+            // if(/*(Math.random()*0.7+0.3)*/0 * this.connectionRate < (1 - dist / maxNearbyDist) /*** 2*/){
+                if(nearby[i].isInput){
+                    neuron.addConnection(nearby[i]);
+                    continue;
+                } else if(nearby[i].isOutput){
+                    nearby[i].addConnection(neuron);
+                    continue;
+                }
+
+                if(Math.random() < this.doubleConnectionChance){
+                    neuron.addConnection(nearby[i]);
+                    nearby[i].addConnection(neuron);
+                } else if(Math.random() < this.connectionChance) {
+                    if(nearby[i].x < neuron.x){
+                        neuron.addConnection(nearby[i]);
+                    } else {
+                        nearby[i].addConnection(neuron);                                 
+                    }
+                }
+
+                // if(Math.random() < 0.5){
+                //     // connect this node to other node
+                //     neuron.addConnection(nearby[i]);
+                // } else {
+                //     // connect other node to this node
+                //     nearby[i].addConnection(neuron);
+                // }
+            // }
+        }
     }
 
     fit(inputs, outputs, epochs=5){
@@ -235,11 +270,15 @@ class FreeformNN {
 
     // uniformly random within a circle
     randomNeuronPosition(){
-        const r = Math.sqrt(Math.random()) * this.coordinateRadius;
-        const theta = Math.random() * Math.PI * 2;
         return {
-            x: Math.cos(theta) * r + this.coordinateMiddle,
-            y: Math.sin(theta) * r + this.coordinateMiddle
+            x: (Math.random()*2-1) * this.coordinateRadius + this.coordinateMiddle,
+            y: (Math.random()*2-1) * this.coordinateRadius + this.coordinateMiddle
         }
     }
+}
+
+function shortAngleDist(a0,a1) {
+    const max = Math.PI*2;
+    const da = (a1 - a0) % max;
+    return 2*da % max - da;
 }
