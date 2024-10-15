@@ -25,6 +25,9 @@ class FreeformNN {
 
         connectionChance=0.5,
         doubleConnectionChance=0.5,
+
+        initialHiddenNeurons=[],
+        initialNetworkConnections=[]
     }){
         // all nodes are static
         this.nodes = [];
@@ -67,29 +70,29 @@ class FreeformNN {
             // }
         }
 
-        // for(let i = 0; i < initialHiddenNeurons.length; i++){
-        //     this.addNeuron({
-        //         x: this.coordinateMiddle + initialHiddenNeurons[i][0] * this.coordinateRadius,
-        //         y: this.coordinateMiddle + initialHiddenNeurons[i][1] * this.coordinateRadius
-        //     })
-        // }
-
-        // for(let i = 0; i < initialNetworkConnections.length; i++){
-        //     this.nodes[initialNetworkConnections[i][1]].addConnection(this.nodes[initialNetworkConnections[i][0]]);
-        // }
-
-        for(let x = -1; x < 1; x += initialGridSize * 2){
-            for(let y = -1; y < 1; y += initialGridSize * 2){
-                this.addNeuron({
-                    x: this.coordinateMiddle + x * this.coordinateRadius * initialSpread + (Math.random()*2-1) * gridRandomOffsetMagnitude,
-                    y: this.coordinateMiddle + y * this.coordinateRadius * initialSpread + (Math.random()*2-1) * gridRandomOffsetMagnitude,
-                })
-            }
+        for(let i = 0; i < initialHiddenNeurons.length; i++){
+            this.addNeuron({
+                x: this.coordinateMiddle + initialHiddenNeurons[i][0] * this.coordinateRadius,
+                y: this.coordinateMiddle + initialHiddenNeurons[i][1] * this.coordinateRadius
+            })
         }
 
-        for(let i = numInputs+numOutputs; i < this.nodes.length; i++){
-            this.connectToNearby(this.nodes[i]);
+        for(let i = 0; i < initialNetworkConnections.length; i++){
+            this.nodes[initialNetworkConnections[i][1]].addConnection(this.nodes[initialNetworkConnections[i][0]]);
         }
+
+        // for(let x = -1; x < 1; x += initialGridSize * 2){
+        //     for(let y = -1; y < 1; y += initialGridSize * 2){
+        //         this.addNeuron({
+        //             x: this.coordinateMiddle + x * this.coordinateRadius * initialSpread + (Math.random()*2-1) * gridRandomOffsetMagnitude,
+        //             y: this.coordinateMiddle + y * this.coordinateRadius * initialSpread + (Math.random()*2-1) * gridRandomOffsetMagnitude,
+        //         })
+        //     }
+        // }
+
+        // for(let i = numInputs+numOutputs; i < this.nodes.length; i++){
+        //     this.connectToNearby(this.nodes[i]);
+        // }
 
         this.numInputs = numInputs;
         this.numOutputs = numOutputs;
@@ -112,6 +115,13 @@ class FreeformNN {
         this.nodes.push(new Neuron(pos));
         this.spHash.addEntity(this.nodes[this.nodes.length-1]);
         return this.nodes[this.nodes.length-1];
+    }
+
+    addZeroNeuron(pos=this.randomNeuronPosition()){
+        const node = this.addNeuron(pos);
+        node.weights = node.weights.fill(0);
+        node.bias = 0;
+        return node;
     }
 
     forward(inputs=[]){
@@ -145,14 +155,51 @@ class FreeformNN {
         // calculating outputs of the output nodes
         const outputs = [];
         for(let i = this.numInputs; i < this.numInputs+this.numOutputs; i++){
-            outputs.push(this.nodes[i].output);
+            outputs.push(this.nodes[i].activationFunction(this.nodes[i].output + this.nodes[i].bias));
         }
 
         return outputs;
     }
 
+    MSE(arr1, arr2){
+        let MSE = 0;
+        for(let i = 0; i < arr1; i++){
+            MSE += (arr1[i] - arr2[i]) ** 2; 
+        }
+        return MSE;
+    }
+
+    calculateFinalError(inputs=[[]], outputs=[[]]){
+        let error = 0;
+        for(let i = 0; i < inputs.length; i++){
+            error += this.MSE(this.forward(inputs[i]), outputs[i]);
+        }
+        return error;
+    }
+
+    calculateError(inputs=[[]], outputs=[[]]){
+        return this.calculateFinalError(inputs, outputs);
+        // const numGroups = 109;
+        // let error = 0;
+
+        // const numberInEachGroup = (inputs.length / numGroups);
+
+        // for(let i = 0; i < numGroups; i++){
+        //     for(let j = 0; j < numberInEachGroup; j++){
+        //         const randomInd = numberInEachGroup * i + Math.floor(Math.random() * numberInEachGroup);
+        //         error += this.MSE(this.forward(inputs[randomInd]), outputs[randomInd]);
+        //     }
+        // }
+
+        // // for(let i = 0; i < inputs.length; i++){
+        // //     const randomInd = Math.floor(Math.random() * inputs.length);
+        // //     error += this.MSE(this.forward(inputs[randomInd]), outputs[randomInd]);
+        // // }
+        // return error;
+    }
+
     // data = array of [inputs1, inputs2, ...], outputs are the same
-    train(inputs=[[]], outputs=[[]]){
+    train(inputs=[[]], outputs=[[]], progressLambda=undefined){
         // goal:
         // split data up into epochs, train, gradient descent, etc.
 
@@ -162,47 +209,34 @@ class FreeformNN {
         let biasGradients = [];
 
         // find the error
-        let error = 0;
-        for(let i = 0; i < inputs.length; i++){
-            error += (this.forward(inputs[i]) - outputs[i]) ** 2;
-
-            // console.log(inputs[i], this.forward(inputs[i]), outputs[i]);
-        }
-
-        // console.log({error});
+        let error = this.calculateError(inputs, outputs);
 
         for(let i = 0; i < this.nodes.length; i++){
             // calculate what happens if we change each weight by a tiny bit
             gradients[i] = [];
             for(let j = 0; j < this.nodes[i].weights.length; j++){
                 this.nodes[i].weights[j] += this.h;
-                let gradientError = 0;
-                for(let j = 0; j < inputs.length; j++){
-                    gradientError += (this.forward(inputs[j]) - outputs[j]) ** 2;
-                }
+                let gradientError = this.calculateError(inputs, outputs);
                 this.nodes[i].weights[j] -= this.h;
 
                 // approximation of the derivative
-                gradients[i][j] = (gradientError - error) / this.h;
+                gradients[i][j] = (gradientError - error);
             }
 
             // calculate what happens if we change the bias by a tiny bit
             this.nodes[i].bias += this.h;
-            let biasError = 0;
-            for(let j = 0; j < inputs.length; j++){
-                biasError += (this.forward(inputs[j]) - outputs[j]) ** 2;
-
-                // console.log(this.nodes[i].bias, inputs[j], outputs[j], {forward: this.forward(inputs[j])});
-            }
+            let biasError = this.calculateError(inputs, outputs);
             this.nodes[i].bias -= this.h;
 
-            biasGradients[i] = (biasError - error) / this.h;
+            biasGradients[i] = (biasError - error);
 
             // console.log({biasError});
 
             // if(this.nodes[i].isOutput)console.log(biasError, error, this.nodes[i].bias);
 
             // if(this.nodes[i].isOutput === true)console.log(biasGradients[i], biasError, error, this.h);
+
+            if(progressLambda !== undefined) progressLambda(i / this.nodes.length);
         }
 
         // apply gradients
@@ -214,7 +248,7 @@ class FreeformNN {
         }
 
         // randomly creating neurons
-        if(Math.random() < this.createNeuronProbability) this.connectToNearby(this.addNeuron());
+        // if(Math.random() < this.createNeuronProbability) this.connectToNearby(this.addNeuron());
     }
 
     connectToNearby(neuron){

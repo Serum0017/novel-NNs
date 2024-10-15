@@ -26,24 +26,37 @@ class Neuron {
         const inputs = this.connections.map(c => c.output);
         if(inputs.length === 0) {
             if(this.isInput) return this.output; 
-            else return this.activationFunction(this.bias);
+            else return 0;//this.activationFunction(this.bias);
         }
         sum = 0;
         for(let i = 0; i < inputs.length; i++){
             sum += inputs[i] * this.weights[i];
         }
         // we divide by length because when new connections are added, we on average want the same output
-        return this.activationFunction(sum / inputs.length + this.bias);
+        return (this.isOutput ? this.output + sum/* / inputs.length*/ : (sum === 0 ? 0 : this.activationFunction(sum/* / inputs.length*/ + this.bias)));
     }
     sigmoid(x){
         return 1 / (1 + Math.exp(-x));
     }
-    // tanh
-    activationFunction(x){
+    tanh(x){
         return 2 * this.sigmoid(2*x) - 1;
     }
+    // ReLU
     ReLU(x){
         return Math.max(0, x);
+    }
+
+    activationFunction(x){
+        if(x > 0) return x;
+        else return .01 * x;
+    }
+
+    LeakyReLU(inputs=[], weightedInput=this.sumWeighted(inputs)){
+        if(weightedInput > 0) return weightedInput;
+        else return .01 * weightedInput;
+    }
+    LeakyReLUDerivative(inputs=[], weightedInput=this.sumWeighted(inputs)){
+        return weightedInput > 0 ? 1 : .01;
     }
 
     addConnection(other){
