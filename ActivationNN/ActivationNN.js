@@ -130,7 +130,7 @@ class TraditionalNN {
         // let biasGradients = new Array(layer.length).fill(0);
         for(let i = 0; i < layer.length; i++){
 
-            if(this.trainingWandBs === true || window.trainingTraditional){
+            if(this.trainingWandBs === true /*|| window.trainingTraditional*/){
                 for(let j = 0; j < lastLayerLen; j++){
                     const derivative = lastNodeOutputs[j] * nodeValues[i];
                     // gradients[i][j] += derivative;
@@ -144,9 +144,17 @@ class TraditionalNN {
                 layer[i].trainableParams[lastLayerLen]/*bias*/ += biasDerivative * this.learningRate;
             } else {
                 for(let j = lastLayerLen+1; j < layer[i].trainableParams.length; j++){
-                    const extraParamDeriv = nodeValues[i] / layer[i].activationParamDerivative(this.nodeOutputs[layerInd-1], this.weightedInputs[layerInd][i]);// / processderiv
+                    const activationfnWRTparam = layer[i].activationParamDerivative(lastNodeOutputs, this.weightedInputs[layerInd][i]);
+                    const goodPart = nodeValues[i] / layer[i].processDerivative(lastNodeOutputs, this.weightedInputs[layerInd][i]);
+                    const extraParamDeriv = activationfnWRTparam * goodPart;
+
                     if(Number.isFinite(extraParamDeriv) === false) continue;
-                    layer[i].trainableParams[j] -= extraParamDeriv * this.learningRate * CONSTANTS.extraParamLearningCoefficients[j - lastLayerLen - 1];
+
+                    layer[i].trainableParams[j] += extraParamDeriv * this.learningRate * CONSTANTS.extraParamLearningCoefficients[j - lastLayerLen - 1];
+
+                    // const extraParamDeriv = nodeValues[i] / layer[i].activationParamDerivative(this.nodeOutputs[layerInd-1], this.weightedInputs[layerInd][i]);// / processderiv
+                    // if(Number.isFinite(extraParamDeriv) === false) continue;
+                    // layer[i].trainableParams[j] -= extraParamDeriv * this.learningRate * CONSTANTS.extraParamLearningCoefficients[j - lastLayerLen - 1];
     
                     // if(CONSTANTS.extraParamLimits[j - lastLayerLen - 1] !== undefined){
                     //     layer[i].trainableParams[j] = Math.max(layer[i].trainableParams[j], CONSTANTS.extraParamLimits[j - lastLayerLen - 1][0]);

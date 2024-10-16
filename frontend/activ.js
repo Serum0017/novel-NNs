@@ -243,7 +243,7 @@ let renderedFrame = false;
 let lastMSE = NN.calculateRealError(data.inputs, data.outputs);
 let logFlag = false, logFlag2 = false, logFlag3 = false;
 
-window.trainingTraditional = false;
+// window.trainingTraditional = false;
 let savedDAFN = null;
 
 const numBatches = 1000;
@@ -257,30 +257,30 @@ async function run(){
         iterations++;
     }
 
-    if(window.trainingTraditional){
-        if(iterations >= 0 && logFlag3 === false){
-            logFlag3 = true;
-            console.log('Traditional Immediate:', lastMSE / data.inputs.length);
-        }
+    // if(window.trainingTraditional){
+    //     if(iterations >= 0 && logFlag3 === false){
+    //         logFlag3 = true;
+    //         console.log('Traditional Immediate:', lastMSE / data.inputs.length);
+    //     }
     
-        else if(iterations >= 10_000 && logFlag === false){
-            logFlag = true;
-            console.log('Traditional 10k:', lastMSE / data.inputs.length);
-        }
+    //     else if(iterations >= 10_000 && logFlag === false){
+    //         logFlag = true;
+    //         console.log('Traditional 10k:', lastMSE / data.inputs.length);
+    //     }
     
-        else if(iterations >= 100_000 && logFlag2 === false){
-            iterations = 0;
-            logFlag = logFlag2 = logFlag3 = false;
-            console.log('Traditional 100k', lastMSE / data.inputs.length);
+    //     else if(iterations >= 100_000 && logFlag2 === false){
+    //         iterations = 0;
+    //         logFlag = logFlag2 = logFlag3 = false;
+    //         console.log('Traditional 100k', lastMSE / data.inputs.length);
 
-            NN = savedDAFN;
-            savedDAFN = null;
-            window.trainingTraditional = false;
-            window.redefineConstants();
-        }
-    }
+    //         NN = savedDAFN;
+    //         savedDAFN = null;
+    //         window.trainingTraditional = false;
+    //         window.redefineConstants();
+    //     }
+    // }
 
-    else {
+    // else {
         if(iterations >= 6_000 && logFlag3 === false){
             logFlag3 = true;
             console.log('DAFN Immediate:', lastMSE / data.inputs.length);
@@ -301,11 +301,11 @@ async function run(){
                 layerSizes: [12,10,8,1],
                 coordinateDescentTime: 6000
             });
-            savedDAFN = cloneNN(NN);
-            window.trainingTraditional = true;
-            window.redefineConstants();
+            // savedDAFN = cloneNN(NN);
+            // window.trainingTraditional = true;
+            // window.redefineConstants();
         }
-    }
+    // }
 
     
     
@@ -320,45 +320,45 @@ async function run(){
     requestAnimationFrame(run);
 }
 
-function cloneNN(NN){
-    const newNN = new TraditionalNN({
-        learningRate: 0.0005,
-        layerSizes: [12,10,8,1],
-        coordinateDescentTime: 6000
-    });
+// function cloneNN(NN){
+//     const newNN = new TraditionalNN({
+//         learningRate: 0.0005,
+//         layerSizes: [12,10,8,1],
+//         coordinateDescentTime: 6000
+//     });
 
-    let tmp = [];
+//     let tmp = [];
 
-    for(let i = 0; i < NN.layers.length; i++){
-        tmp[i] = [];
-        for(let j = 0; j < NN.layers[i].length; j++){
-            const n = NN.layers[i][j];
-            tmp[i][j] = {process: n.process, processDerivative: n.processDerivative, activationParamDerivative: n.activationParamDerivative};
-            delete n.process;
-            delete n.processDerivative;
-            delete n.activationParamDerivative;
-        }
-    }
+//     for(let i = 0; i < NN.layers.length; i++){
+//         tmp[i] = [];
+//         for(let j = 0; j < NN.layers[i].length; j++){
+//             const n = NN.layers[i][j];
+//             tmp[i][j] = {process: n.process, processDerivative: n.processDerivative, activationParamDerivative: n.activationParamDerivative};
+//             delete n.process;
+//             delete n.processDerivative;
+//             delete n.activationParamDerivative;
+//         }
+//     }
 
-    Object.assign(newNN, structuredClone(NN));
-    for(let i = 0; i < newNN.layers.length; i++){
-        for(let j = 0; j < newNN.layers[i].length; j++){
-            const l = newNN.layers[i][j];
-            newNN.layers[i][j] = new Neuron(newNN.layers[i][j].trainableParams.length - CONSTANTS.extraParams - 1);
-            Object.assign(newNN.layers[i][j], l);
-        }
-    }
+//     Object.assign(newNN, structuredClone(NN));
+//     for(let i = 0; i < newNN.layers.length; i++){
+//         for(let j = 0; j < newNN.layers[i].length; j++){
+//             const l = newNN.layers[i][j];
+//             newNN.layers[i][j] = new Neuron(newNN.layers[i][j].trainableParams.length - CONSTANTS.extraParams - 1);
+//             Object.assign(newNN.layers[i][j], l);
+//         }
+//     }
 
-    for(let i = 0; i < NN.layers.length; i++){
-        for(let j = 0; j < NN.layers[i].length; j++){
-            for(let key in tmp[i][j]){
-                NN.layers[i][j][key] = tmp[i][j][key];
-            }
-        }
-    }
+//     for(let i = 0; i < NN.layers.length; i++){
+//         for(let j = 0; j < NN.layers[i].length; j++){
+//             for(let key in tmp[i][j]){
+//                 NN.layers[i][j][key] = tmp[i][j][key];
+//             }
+//         }
+//     }
 
-    return newNN;
-}
+//     return newNN;
+// }
 
 // function until(condition, checkInterval=400) {
 //     if(!!condition()) return true;
@@ -373,5 +373,5 @@ function cloneNN(NN){
 
 // renderNetwork();
 
-window.redefineConstants();
+// window.redefineConstants();
 run();

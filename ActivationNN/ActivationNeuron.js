@@ -1,4 +1,4 @@
-let/*const*/ CONSTANTS = Object.freeze({
+/*let*/const CONSTANTS = Object.freeze({
     // extraParams: 0,
     // activationFunction: 'LeakyReLU',
     // extraParamLearningCoefficients: [],
@@ -10,23 +10,23 @@ let/*const*/ CONSTANTS = Object.freeze({
     extraParamLimits: [/*[0.001, 0.1]*/]
 })
 
-window.redefineConstants = () => {
-    if(window.trainingTraditional){
-        CONSTANTS = Object.freeze({
-            extraParams: 0,
-            activationFunction: 'LeakyReLU',
-            extraParamLearningCoefficients: [],
-            extraParamLimits: []
-        })
-    } else {
-        CONSTANTS = Object.freeze({
-            extraParams: 1,
-            activationFunction: /*'LeakyReLU',*/'DynamicLeakyReLU',//'sigmoid',//'DynamicLeakyReLU',//,//'classic',
-            extraParamLearningCoefficients: [1],//[1 / 100],
-            extraParamLimits: [/*[0.001, 0.1]*/]
-        })
-    }
-}
+// window.redefineConstants = () => {
+//     if(window.trainingTraditional){
+//         CONSTANTS = Object.freeze({
+//             extraParams: 0,
+//             activationFunction: 'LeakyReLU',
+//             extraParamLearningCoefficients: [],
+//             extraParamLimits: []
+//         })
+//     } else {
+//         CONSTANTS = Object.freeze({
+//             extraParams: 1,
+//             activationFunction: /*'LeakyReLU',*/'DynamicLeakyReLU',//'sigmoid',//'DynamicLeakyReLU',//,//'classic',
+//             extraParamLearningCoefficients: [1],//[1 / 100],
+//             extraParamLimits: [/*[0.001, 0.1]*/]
+//         })
+//     }
+// }
 
 let sum, trainableParamsLen;
 class Neuron {
