@@ -2,8 +2,8 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <meta name="application-name" content="Freeform-NN">
-    <meta name="description" content="An implementation of a new neural network structure.">
+    <meta name="application-name" content="Novel-NN">
+    <meta name="description" content="An implementation of two new neural network structures.">
     <meta name="msapplication-TileColor" content="#181818">
     <meta name="theme-color" content="#181818">
     <title>Freeform Neural Net Visualizer!</title>
@@ -14,21 +14,24 @@
   <body>
     <canvas id="canvas" width="1600" height="900"></canvas>
     
+    <!--Data. In data.js you can uncomment different datasets. Levels 3,4 are unused in the paper.-->
     <script src="data.js"></script>
 
+    <!--FNN. First script is a neural network pretrained for 200k iterations.-->
     <script src="../cryoFreeze.js"></script>
-
-    <!-- <script src="../FreeformNN/spatialHash.js"></script>
+    <script src="../FreeformNN/spatialHash.js"></script>
     <script src="../FreeformNN/Neuron.js"></script>
     <script src="../FreeformNN/FreeformNN.js"></script>
-    <script src="freeform.js"></script> -->
+    <script src="freeform.js"></script>
 
-    <!-- <script src="../DiscreteNN/DescisionTree.js"></script>
-    <script src="../DiscreteNN/DiscreteNN.js"></script>
-    <script src="discrete.js"></script>-->
-
-    <script src="../ActivationNN/ActivationNeuron.js"></script>
+    <!--Uncomment this one (and comment others) for the DAFN.-->
+    <!-- <script src="../ActivationNN/ActivationNeuron.js"></script>
     <script src="../ActivationNN/ActivationNN.js"></script>
-    <script src="activ.js"></script>
+    <script src="activ.js"></script> -->
+
+    <!--Uncomment this one for the OldDiscrete Neural Network.-->
+    <!-- <script src="../OldDiscrete/DescisionTree.js"></script>
+    <script src="../OldDiscrete/DiscreteNN.js"></script>
+    <script src="../OldDiscrete/discrete.js"></script>-->
   </body>
 </html>

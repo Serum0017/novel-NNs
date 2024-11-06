@@ -387,15 +387,15 @@ function interpolate(a,b,t){
 }
 
 function run(){
-    // NN.train(data.inputs, data.outputs, /*(progressPercent) => {console.log(`${Math.round(progressPercent*100)}% completed!`)}*/);
+    NN.train(data.inputs, data.outputs, /*(progressPercent) => {console.log(`${Math.round(progressPercent*100)}% completed!`)}*/);
 
     renderNetwork();
 
-    requestAnimationFrame(run);
+    // requestAnimationFrame(run);
 
-    // setTimeout(() => {
-    //     run();
-    // }, 100)
+    setTimeout(() => {
+        run();
+    }, 100)
 }
 
 run();

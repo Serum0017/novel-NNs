@@ -3,11 +3,27 @@ const ctx = canvas.getContext('2d');
 
 const physicalBrainSize = 1;
 
+const freeformIterations = 50/*00*/;//6000
+
 let NN = new TraditionalNN({
     learningRate: 0.0005,
     layerSizes: [12,10,8,1],
-    coordinateDescentTime: 6000
+    // coordinateDescentTime: 6000
 });
+
+let activationNN = cloneNN(NN);
+
+console.log('traditional error: ', NN.calculateRealError(data.inputs, data.outputs), activationNN.calculateRealError(data.inputs, data.outputs) );
+
+window.trainingMode = 'freeform';
+
+for(let i = 0; i < freeformIterations; i++){
+    activationNN.train(data.inputs, data.outputs);
+}
+
+window.trainingMode = 'traditional';
+
+console.log('now DAFN should be ahead: ', activationNN.calculateRealError(data.inputs, data.outputs) );
 
 // Object.assign(NN, pretrainedNN);
 // for(let i = 0; i < NN.layers.length; i++){
@@ -107,7 +123,10 @@ function renderNetwork(){
     const MSE = NN.calculateRealError(data.inputs, data.outputs);
     lastMSE = MSE;
 
-    const t = "Error: [" + MSE.toFixed(2) + "] Iterations: [" + iterations + "]";
+    const MSE2 = activationNN.calculateRealError(data.inputs, data.outputs);
+    lastMSE2 = MSE2;
+
+    const t = "Error: [" + MSE.toFixed(2) + " | " + MSE2.toFixed(2) + "] Iterations: [" + iterations + "]";
     // const t = "Target: [" + data.outputs.toString() + "]" + " Outputs: [" + data.inputs.map(o => NN.forward(o)[0]?.toFixed(2)).toString() + "]";
     ctx.font = '500 1px Inter';
     const metrics = ctx.measureText(t);
@@ -241,12 +260,13 @@ function interpolate(a,b,t){
 let iterations = 0;
 let renderedFrame = false;
 let lastMSE = NN.calculateRealError(data.inputs, data.outputs);
-let logFlag = false, logFlag2 = false, logFlag3 = false;
+let lastMSE2 = activationNN.calculateRealError(data.inputs, data.outputs);
+let logFlag1k = false, logFlag2k = false, logFlag3k = false, logFlag4k = false, logFlag5k = false;
 
 // window.trainingTraditional = false;
 let savedDAFN = null;
 
-const numBatches = 1000;
+const numBatches = 100;///*00*/;
 async function run(){
     if(window.stop === true) return;
     renderedFrame = false;
@@ -255,6 +275,12 @@ async function run(){
         // train one iteration
         NN.train(data.inputs, data.outputs);
         iterations++;
+    }
+
+    for(let i = 0; i < numBatches; i++){
+        // train one iteration
+        activationNN.train(data.inputs, data.outputs);
+        // iterations++;
     }
 
     // if(window.trainingTraditional){
@@ -281,29 +307,72 @@ async function run(){
     // }
 
     // else {
-        if(iterations >= 6_000 && logFlag3 === false){
-            logFlag3 = true;
-            console.log('DAFN Immediate:', lastMSE / data.inputs.length);
+
+    renderNetwork();
+
+        // if(logFlag3 === false){
+        //     logFlag3 = true;
+        //     console.log(`Immediate: ` + [lastMSE / data.inputs.length, lastMSE2 / data.inputs.length]);
+        // }
+
+        if(iterations >= 0 && logFlag1k === false){
+            logFlag1k = true;
+            console.log(`Immediate: ` + [lastMSE / data.inputs.length, lastMSE2 / data.inputs.length]);
         }
-    
-        else if(iterations >= 16_000 && logFlag === false){
-            logFlag = true;
-            console.log('DAFN 10k:', lastMSE / data.inputs.length);
+
+        else if(iterations >= 10_000 && logFlag2k === false){
+            logFlag2k = true;
+            console.log(`10k: ` + [lastMSE / data.inputs.length, lastMSE2 / data.inputs.length]);
         }
+
+        // else if(iterations >= 3_000 && logFlag3k === false){
+        //     logFlag3k = true;
+        //     console.log(`3k: ` + [lastMSE / data.inputs.length, lastMSE2 / data.inputs.length]);
+        // }
     
-        else if(iterations >= 106_000 && logFlag2 === false){
+        // else if(iterations >= 4_000 && logFlag4k === false){
+        //     logFlag4k = true;
+        //     console.log(`4k: ` + [lastMSE / data.inputs.length, lastMSE2 / data.inputs.length]);
+        // }
+    
+        else if(iterations >= 100_000 && logFlag5k === false){
             iterations = 0;
-            logFlag = logFlag2 = logFlag3 = false;
-            console.log('DAFN 100k', lastMSE / data.inputs.length);
+            logFlag1k = logFlag2k = logFlag3k = logFlag4k = logFlag5k = false;
+            console.log(`100k: ` + [lastMSE / data.inputs.length, lastMSE2 / data.inputs.length]);
     
-            NN = new TraditionalNN({
-                learningRate: 0.0005,
-                layerSizes: [12,10,8,1],
-                coordinateDescentTime: 6000
-            });
-            // savedDAFN = cloneNN(NN);
-            // window.trainingTraditional = true;
-            // window.redefineConstants();
+            let err = NaN;
+            let flag = true;
+            while(isNaN(err)){
+                if(flag === true){
+                    flag = false;
+                } else {
+                    console.log('retrying!');
+                }
+                
+                window.trainingMode = 'traditional';
+
+                NN = new TraditionalNN({
+                    learningRate: 0.0005,
+                    layerSizes: [12,10,8,1],
+                    // coordinateDescentTime: 6000
+                });
+    
+                activationNN = cloneNN(NN);
+                // savedDAFN = cloneNN(NN);
+                // window.trainingTraditional = true;
+                // window.redefineConstants();
+    
+                window.trainingMode = 'freeform';
+    
+                for(let i = 0; i < freeformIterations; i++){
+                    activationNN.train(data.inputs, data.outputs);
+                }
+
+                err = NN.calculateRealError(data.inputs, data.outputs);
+            }
+            
+
+            window.trainingMode = 'traditional';
         }
     // }
 
@@ -315,50 +384,48 @@ async function run(){
     // // run again
     // run();
 
-    renderNetwork();
-
     requestAnimationFrame(run);
 }
 
-// function cloneNN(NN){
-//     const newNN = new TraditionalNN({
-//         learningRate: 0.0005,
-//         layerSizes: [12,10,8,1],
-//         coordinateDescentTime: 6000
-//     });
+function cloneNN(NN){
+    const newNN = new TraditionalNN({
+        learningRate: 0.0005,
+        layerSizes: [12,10,8,1],
+        // coordinateDescentTime: 6000
+    });
 
-//     let tmp = [];
+    let tmp = [];
 
-//     for(let i = 0; i < NN.layers.length; i++){
-//         tmp[i] = [];
-//         for(let j = 0; j < NN.layers[i].length; j++){
-//             const n = NN.layers[i][j];
-//             tmp[i][j] = {process: n.process, processDerivative: n.processDerivative, activationParamDerivative: n.activationParamDerivative};
-//             delete n.process;
-//             delete n.processDerivative;
-//             delete n.activationParamDerivative;
-//         }
-//     }
+    for(let i = 0; i < NN.layers.length; i++){
+        tmp[i] = [];
+        for(let j = 0; j < NN.layers[i].length; j++){
+            const n = NN.layers[i][j];
+            tmp[i][j] = {process: n.process, processDerivative: n.processDerivative, activationParamDerivative: n.activationParamDerivative};
+            delete n.process;
+            delete n.processDerivative;
+            delete n.activationParamDerivative;
+        }
+    }
 
-//     Object.assign(newNN, structuredClone(NN));
-//     for(let i = 0; i < newNN.layers.length; i++){
-//         for(let j = 0; j < newNN.layers[i].length; j++){
-//             const l = newNN.layers[i][j];
-//             newNN.layers[i][j] = new Neuron(newNN.layers[i][j].trainableParams.length - CONSTANTS.extraParams - 1);
-//             Object.assign(newNN.layers[i][j], l);
-//         }
-//     }
+    Object.assign(newNN, structuredClone(NN));
+    for(let i = 0; i < newNN.layers.length; i++){
+        for(let j = 0; j < newNN.layers[i].length; j++){
+            const l = newNN.layers[i][j];
+            newNN.layers[i][j] = new Neuron(newNN.layers[i][j].trainableParams.length - CONSTANTS.extraParams - 1);
+            Object.assign(newNN.layers[i][j], l);
+        }
+    }
 
-//     for(let i = 0; i < NN.layers.length; i++){
-//         for(let j = 0; j < NN.layers[i].length; j++){
-//             for(let key in tmp[i][j]){
-//                 NN.layers[i][j][key] = tmp[i][j][key];
-//             }
-//         }
-//     }
+    for(let i = 0; i < NN.layers.length; i++){
+        for(let j = 0; j < NN.layers[i].length; j++){
+            for(let key in tmp[i][j]){
+                NN.layers[i][j][key] = tmp[i][j][key];
+            }
+        }
+    }
 
-//     return newNN;
-// }
+    return newNN;
+}
 
 // function until(condition, checkInterval=400) {
 //     if(!!condition()) return true;
